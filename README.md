@@ -1,7 +1,7 @@
 # CSV_Image-Combiner
 A tool that can be used to generate multiple copies of an image using rows data from a CSV file.
 
-------------------- A Detailed Example Of How To Use The Tool: -------------------
+----------------- A Detailed Example Of How To Use The Tool: -----------------
 -
 
 Let's say you want to generate a number of certificates, using one certificate image with no name written in it:

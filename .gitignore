@@ -1,0 +1,16 @@
+build/Main/Analysis-00.toc
+build/Main/base_library.zip
+build/Main/EXE-00.toc
+build/Main/localpycs/pyimod01_archive.pyc
+build/Main/localpycs/pyimod02_importers.pyc
+build/Main/localpycs/pyimod03_ctypes.pyc
+build/Main/localpycs/pyimod04_pywin32.pyc
+build/Main/localpycs/struct.pyc
+build/Main/Main.pkg
+build/Main/PKG-00.toc
+build/Main/PYZ-00.pyz
+build/Main/PYZ-00.toc
+build/Main/xref-Main.html
+build/Main/warn-Main.txt
+dist/Main.exe
+Main.spec

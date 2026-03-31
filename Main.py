@@ -526,7 +526,7 @@ tk.Entry(bottom_bar, textvariable=prefix_var, width=12).pack(side=tk.LEFT, padx=
 
 tk.Label(bottom_bar, text="  Format:").pack(side=tk.LEFT)
 format_var = tk.StringVar(value="PNG")
-tk.OptionMenu(bottom_bar, format_var, "PNG", "JPG", "WEBP").pack(side=tk.LEFT, padx=2)
+tk.OptionMenu(bottom_bar, format_var, "PNG", "WEBP").pack(side=tk.LEFT, padx=2)
 
 tk.Button(bottom_bar, text="⚡  Generate All Images",
           command=generate, bg="#4a90d9", fg="white").pack(side=tk.RIGHT, padx=4)

@@ -1,6 +1,8 @@
 # CSV_Image-Combiner
 A tool that can be used to generate multiple copies of an image using rows data from a CSV file.
 
+It accepts Arabic CSV data too, was originally built for that.
+
 ----------------- A Detailed Example Of How To Use The Tool: -----------------
 -
 

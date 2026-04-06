@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox, colorchooser
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from bidi.algorithm import get_display
 from pathlib import Path
-import sys, csv, arabic_reshaper
+import sys, csv, arabic_reshaper, threading
 
 # ── globals ────────────────────────────────────────────────────────────────────
 scale          = None
@@ -16,6 +16,7 @@ csv_rows       = []
 image_for_generating = None
 tk_image_ref   = None
 preview_img = None
+status_var = None
 
 # ── grade tiers (highest threshold first) ─────────────────────────────────────
 GRADE_TIERS = [
@@ -112,6 +113,7 @@ def csv_file_selection():
         csv_headers = list(reader.fieldnames)
         csv_rows    = list(reader)
     csv_label.config(text=f"CSV: {Path(path).name}  ({len(csv_rows)} rows, {len(csv_headers)} columns)")
+    progress_var.set("Progress: " + f"0 / {len(csv_rows)}")
     if image_for_generating:
         createbutton.config(state=tk.NORMAL)
 
@@ -223,7 +225,7 @@ def create_rectangle():
               ).grid(row=2, column=2)
 
     tk.Label(outer, text="Font Size:").grid(row=3, column=0, sticky="w")
-    maxfont_var = tk.StringVar(value="100")
+    maxfont_var = tk.StringVar(value="36")
     tk.Entry(outer, textvariable=maxfont_var, width=6).grid(row=3, column=1, sticky="w")
 
     w_var = tk.StringVar(value=str(RECT_W))
@@ -340,7 +342,7 @@ def preview():
         try:
             max_font = int(r['maxfont_var'].get())
         except ValueError:
-            max_font = 100
+            max_font = 36
         disp_text, font = prepare_text(raw_text, r['font_var'].get(), max_w, max_font)
         draw.text(((x1+x2)/2, (y1+y2)/2), disp_text,
                   font=font, fill=r['color_var'].get(), anchor="mm")
@@ -354,6 +356,7 @@ def preview():
 
 # ── Generate all images ────────────────────────────────────────────────────────
 def generate():
+    # ── validations first ──────────────────────────────
     if not image_for_generating:
         messagebox.showinfo("CSV_Image Combiner", "No image loaded.")
         return
@@ -368,69 +371,98 @@ def generate():
     if not out_dir:
         return
 
+    out_path = Path(out_dir)
+    existing_files = list(out_path.iterdir())
+    if existing_files:
+        confirm = messagebox.askyesno(
+            "Folder Not Empty",
+            f"The selected folder already contains {len(existing_files)} item(s).\n"
+            "Files with the same name will be overwritten.\n\n"
+            "Continue anyway?"
+        )
+        if not confirm:
+            return
+
+    # ── setup before thread starts ─────────────────────
     prefix = prefix_var.get().strip()
     fmt    = format_var.get()
     ext    = "jpeg" if fmt == "JPG" else fmt.lower()
-    incomplete_log = []
 
-    for idx, row in enumerate(csv_rows, start=1):
-        out_img = image_for_generating.copy()
-        draw    = ImageDraw.Draw(out_img)
-        row_incomplete = False
+    progress_var.set("Progress: " + f"0 / {len(csv_rows)}")
+    status_var.set("Status: Working...")
+    generatebutton.config(state=tk.DISABLED)
 
-        for r in rectangles:
-            col      = r['col_var'].get()
-            raw_text = row.get(col, "")
-            if not raw_text.strip():
-                row_incomplete = True
+    # ── generation logic runs in background ────────────
+    def run_generation():
+        incomplete_log = []
 
-            # score → grade label
-            if score_toggle_var.get() and col == score_col_var.get():
-                raw_text = get_grade_label(raw_text)
+        for idx, row in enumerate(csv_rows, start=1):
+            out_img = image_for_generating.copy()
+            draw    = ImageDraw.Draw(out_img)
+            row_incomplete = False
 
-            coords          = canvas.coords(r['rect_id'])
-            x1, y1, x2, y2 = [c / scale for c in coords]
-            max_w = x2 - x1
-            try:
-                max_font = int(r['maxfont_var'].get())
-            except ValueError:
-                max_font = 100
-            disp_text, font = prepare_text(raw_text, r['font_var'].get(), max_w, max_font)
-            draw.text(((x1+x2)/2, (y1+y2)/2), disp_text,
-                      font=font, fill=r['color_var'].get(), anchor="mm")
+            for r in rectangles:
+                col      = r['col_var'].get()
+                raw_text = row.get(col, "")
+                if not raw_text.strip():
+                    row_incomplete = True
 
-        # determine save path — gender split or flat folder
-        marker   = "x" if row_incomplete else ""
-        filename = f"{prefix}{marker}{idx}.{ext}"
-        save_kwargs = {'quality': 95} if fmt == "JPG" else {}
+                if score_toggle_var.get() and col == score_col_var.get():
+                    raw_text = get_grade_label(raw_text)
 
-        if gender_toggle_var.get():
-            gender_val = row.get(gender_col_var.get(), "").strip()
-            if gender_val == male_val_var.get().strip():
-                subfolder = Path(out_dir) / "males"
-            elif gender_val == female_val_var.get().strip():
-                subfolder = Path(out_dir) / "females"
+                coords          = canvas.coords(r['rect_id'])
+                x1, y1, x2, y2 = [c / scale for c in coords]
+                max_w = x2 - x1
+                try:
+                    max_font = int(r['maxfont_var'].get())
+                except ValueError:
+                    max_font = 36
+                disp_text, font = prepare_text(raw_text, r['font_var'].get(), max_w, max_font)
+                draw.text(((x1+x2)/2, (y1+y2)/2), disp_text,
+                          font=font, fill=r['color_var'].get(), anchor="mm")
+
+            marker   = "x" if row_incomplete else ""
+            filename = f"{prefix}{marker}{idx}.{ext}"
+            save_kwargs = {'quality': 95} if fmt == "JPG" else {}
+
+            if gender_toggle_var.get():
+                gender_val = row.get(gender_col_var.get(), "").strip()
+                if gender_val == male_val_var.get().strip():
+                    subfolder = Path(out_dir) / "رجال"
+                elif gender_val == female_val_var.get().strip():
+                    subfolder = Path(out_dir) / "نساء"
+                else:
+                    subfolder = Path(out_dir) / "لم يتم التحديد"
+                subfolder.mkdir(exist_ok=True)
+                save_path = subfolder / filename
             else:
-                subfolder = Path(out_dir) / "other"
-            subfolder.mkdir(exist_ok=True)
-            save_path = subfolder / filename
+                save_path = Path(out_dir) / filename
+
+            out_img.save(str(save_path), **save_kwargs)
+
+            if row_incomplete:
+                incomplete_log.append(f"Row {idx}: missing data in some columns")
+
+            window.after(0, lambda i=idx: progress_var.set("Progress: " + f"{i} / {len(csv_rows)}"))
+
+        # ── cleanup after loop finishes ────────────────
+        if incomplete_log:
+            log_path = Path(out_dir) / f"{prefix}incomplete_rows.txt"
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(incomplete_log))
+            window.after(0, lambda: messagebox.showinfo("Done",
+                f"Generated {len(csv_rows)} images.\n"
+                f"{len(incomplete_log)} had missing data, see incomplete_rows.txt"))
         else:
-            save_path = Path(out_dir) / filename
+            window.after(0, lambda: messagebox.showinfo("Done",
+                f"All {len(csv_rows)} images generated successfully!"))
 
-        out_img.save(str(save_path), **save_kwargs)
+        window.after(0, lambda: status_var.set("Status: Idle"))
+        window.after(0, lambda: progress_var.set("Progress: " + f" 0 / {len(csv_rows)}"))
+        window.after(0, lambda: generatebutton.config(state=tk.NORMAL))
 
-        if row_incomplete:
-            incomplete_log.append(f"Row {idx}: missing data in some columns")
-
-    if incomplete_log:
-        log_path = Path(out_dir) / f"{prefix}incomplete_rows.txt"
-        with open(log_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(incomplete_log))
-        messagebox.showinfo("Done",
-            f"Generated {len(csv_rows)} images.\n"
-            f"{len(incomplete_log)} had missing data, see incomplete_rows.txt")
-    else:
-        messagebox.showinfo("Done", f"All {len(csv_rows)} images generated successfully!")
+    thread = threading.Thread(target=run_generation, daemon=True)
+    thread.start()
 
 def _refresh_scroll(event=None):
     settings_canvas.configure(scrollregion=settings_canvas.bbox("all"))
@@ -441,7 +473,6 @@ def _refresh_scroll(event=None):
 window = tk.Tk()
 window.title("CSV + Image Combiner")
 window.resizable(True, True)
-
 # ── top bar ────────────────────────────────────────────────────────────────────
 top_bar = tk.Frame(window)
 top_bar.pack(fill=tk.X, padx=6, pady=4)
@@ -486,11 +517,11 @@ gender_col_menu = tk.OptionMenu(gender_settings_frame, gender_col_var, "")
 gender_col_menu.config(width=10)
 gender_col_menu.pack(side=tk.LEFT, padx=2)
 
-male_val_var = tk.StringVar(value="Male")
+male_val_var = tk.StringVar(value="رجال")
 tk.Label(gender_settings_frame, text="Male value:").pack(side=tk.LEFT, padx=(8, 0))
 tk.Entry(gender_settings_frame, textvariable=male_val_var, width=8).pack(side=tk.LEFT, padx=2)
 
-female_val_var = tk.StringVar(value="Female")
+female_val_var = tk.StringVar(value="نساء")
 tk.Label(gender_settings_frame, text="Female value:").pack(side=tk.LEFT, padx=(8, 0))
 tk.Entry(gender_settings_frame, textvariable=female_val_var, width=8).pack(side=tk.LEFT, padx=2)
 
@@ -520,6 +551,16 @@ tk.Label(score_settings_frame,
 bottom_bar = tk.Frame(window)
 bottom_bar.pack(fill=tk.X, padx=6, pady=6, side=tk.BOTTOM)
 
+generatebutton = tk.Button(bottom_bar, text="⚡  Generate All Images",
+          command=generate, bg="#4a90d9", fg="white")
+generatebutton.pack(side=tk.RIGHT, padx=4)
+
+progress_var = tk.StringVar(value="Progress: " + "0/0 (Select A CSV File!)")
+tk.Label(bottom_bar, textvariable=progress_var, fg="black", bg="#0af04f").pack(side=tk.RIGHT, padx=12)
+
+status_var = tk.StringVar(value="Status: Idle")
+tk.Label(bottom_bar, textvariable=status_var, fg="black", bg="#08fc14").pack(side=tk.RIGHT, padx=12)
+
 tk.Label(bottom_bar, text="Filename prefix:").pack(side=tk.LEFT)
 prefix_var = tk.StringVar(value="")
 tk.Entry(bottom_bar, textvariable=prefix_var, width=12).pack(side=tk.LEFT, padx=2)
@@ -527,10 +568,6 @@ tk.Entry(bottom_bar, textvariable=prefix_var, width=12).pack(side=tk.LEFT, padx=
 tk.Label(bottom_bar, text="  Format:").pack(side=tk.LEFT)
 format_var = tk.StringVar(value="PNG")
 tk.OptionMenu(bottom_bar, format_var, "PNG", "WEBP").pack(side=tk.LEFT, padx=2)
-
-tk.Button(bottom_bar, text="⚡  Generate All Images",
-          command=generate, bg="#4a90d9", fg="white").pack(side=tk.RIGHT, padx=4)
-
 # ── main area ─────────────────────────────────────────────────────────────────
 main_area = tk.Frame(window)
 main_area.pack(fill=tk.BOTH, expand=True, padx=6, pady=4)

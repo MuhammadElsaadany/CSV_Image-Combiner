@@ -16,3 +16,4 @@ dist/Main.exe
 Main.spec
 dist/CSV_Image-Combiner v1.0.0.exe
 dist/CSV_Image-Combiner v1.0.1.exe
+*.exe

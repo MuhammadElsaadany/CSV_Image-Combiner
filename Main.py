@@ -544,7 +544,10 @@ score_col_menu.config(width=10)
 score_col_menu.pack(side=tk.LEFT, padx=2)
 
 tk.Label(score_settings_frame,
-         text="  ≥80% ممتاز · ≥60% جيد جداً · ≥40% جيد · <40% مقبول",
+         text=" أكثر من 80% = ممتاز"
+         " | أكثر من 60% = جيد جداً"
+         " | أكثر من 40% = جيد"
+         " | أقل من 40% = مقبول",
          fg="gray").pack(side=tk.LEFT, padx=6)
 
 # ── bottom bar ─────────────────────────────────────────────────────────────────

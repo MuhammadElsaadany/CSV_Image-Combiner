@@ -17,6 +17,11 @@ image_for_generating = None
 tk_image_ref   = None
 preview_img = None
 status_var = None
+drag_locked = False
+
+def set_drag_locked(state):
+    global drag_locked
+    drag_locked = state
 
 # ── grade tiers (highest threshold first) ─────────────────────────────────────
 GRADE_TIERS = [
@@ -78,6 +83,8 @@ def get_grade_label(score_string):
 # ── canvas mouse events ────────────────────────────────────────────────────────
 def on_mouse_press(event):
     global move_this_rect, last_x, last_y
+    if drag_locked:
+        return
     clicked = canvas.find_overlapping(event.x, event.y, event.x, event.y)
     for r in rectangles:
         if r['rect_id'] in clicked:
@@ -113,7 +120,9 @@ def csv_file_selection():
         csv_headers = list(reader.fieldnames)
         csv_rows    = list(reader)
     csv_label.config(text=f"CSV: {Path(path).name}  ({len(csv_rows)} rows, {len(csv_headers)} columns)")
-    progress_var.set("Progress: " + f"0 / {len(csv_rows)}")
+    progress_var.set(f"0 / {len(csv_rows)}")
+    score_chkbutton.config(state=tk.NORMAL)
+    gender_chkbutton.config(state=tk.NORMAL)
     if image_for_generating:
         createbutton.config(state=tk.NORMAL)
 
@@ -212,28 +221,33 @@ def create_rectangle():
     tk.Label(outer, text="Font:").grid(row=1, column=0, sticky="w")
     font_lbl = tk.Label(outer, text="Amiri (default)", width=12, anchor="w", relief="sunken")
     font_lbl.grid(row=1, column=1, sticky="ew")
-    tk.Button(outer, text="…", width=2,
+    font_select_btn = tk.Button(outer, text="…", width=2,
               command=lambda fv=font_var, fl=font_lbl: pick_font(fv, fl)
-              ).grid(row=1, column=2)
+              )
+    font_select_btn.grid(row=1, column=2)
 
     color_var = tk.StringVar(value="#000000")
     tk.Label(outer, text="Color:").grid(row=2, column=0, sticky="w")
     color_preview = tk.Label(outer, bg="#000000", width=4, relief="sunken")
     color_preview.grid(row=2, column=1, sticky="w")
-    tk.Button(outer, text="Pick",
+    color_pick_btn = tk.Button(outer, text="Pick",
               command=lambda cv=color_var, cp=color_preview: pick_color(cv, cp)
-              ).grid(row=2, column=2)
+              )
+    color_pick_btn.grid(row=2, column=2)
 
     tk.Label(outer, text="Font Size:").grid(row=3, column=0, sticky="w")
     maxfont_var = tk.StringVar(value="36")
-    tk.Entry(outer, textvariable=maxfont_var, width=6).grid(row=3, column=1, sticky="w")
+    font_size_entry = tk.Entry(outer, textvariable=maxfont_var, width=6)
+    font_size_entry.grid(row=3, column=1, sticky="w")
 
     w_var = tk.StringVar(value=str(RECT_W))
     h_var = tk.StringVar(value=str(RECT_H))
     tk.Label(outer, text="Width:").grid(row=4, column=0, sticky="w")
-    tk.Entry(outer, textvariable=w_var, width=6).grid(row=4, column=1, sticky="w")
+    rect_width_entry = tk.Entry(outer, textvariable=w_var, width=6)
+    rect_width_entry.grid(row=4, column=1, sticky="w")
     tk.Label(outer, text="Height:").grid(row=5, column=0, sticky="w")
-    tk.Entry(outer, textvariable=h_var, width=6).grid(row=5, column=1, sticky="w")
+    rect_height_entry = tk.Entry(outer, textvariable=h_var, width=6)
+    rect_height_entry.grid(row=5, column=1, sticky="w")
 
     x_var = tk.StringVar(value=str(rx1))
     y_var = tk.StringVar(value=str(ry1))
@@ -251,6 +265,12 @@ def create_rectangle():
         'h_var':       h_var,
         'x_var':       x_var,
         'y_var':       y_var,
+        'col_menu':        col_menu,
+        'font_btn':        font_select_btn,
+        'color_btn':       color_pick_btn,
+        'fontsize_entry':  font_size_entry,
+        'width_entry':     rect_width_entry,
+        'height_entry':    rect_height_entry,
     }
     rectangles.append(r)
 
@@ -356,6 +376,8 @@ def preview():
 
 # ── Generate all images ────────────────────────────────────────────────────────
 def generate():
+    global drag_locked
+
     # ── validations first ──────────────────────────────
     if not image_for_generating:
         messagebox.showinfo("CSV_Image Combiner", "No image loaded.")
@@ -388,14 +410,37 @@ def generate():
     fmt    = format_var.get()
     ext    = "jpeg" if fmt == "JPG" else fmt.lower()
 
-    progress_var.set("Progress: " + f"0 / {len(csv_rows)}")
-    status_var.set("Status: Working...")
+    progress_var.set(f"0 / {len(csv_rows)}")
+    progress_label.config(fg="green")
+    status_var.set("Working...")
+    status_label.config(fg="green")
     generatebutton.config(state=tk.DISABLED)
+    score_chkbutton.config(state=tk.DISABLED)
+    gender_chkbutton.config(state=tk.DISABLED)
+    createbutton.config(state=tk.DISABLED)
+    removebutton.config(state=tk.DISABLED)
+    previewbutton.config(state=tk.DISABLED)
+    gender_col_menu.config(state=tk.DISABLED)
+    male_entry.config(state=tk.DISABLED)
+    female_entry.config(state=tk.DISABLED)
+    score_col_menu.config(state=tk.DISABLED)
+    filename_entry.config(state=tk.DISABLED)
+    format_menu.config(state=tk.DISABLED)
+    selectimg_button.config(state=tk.DISABLED)
+    selectcsv_button.config(state=tk.DISABLED)
+    for r in rectangles:
+        r['col_menu'].config(state=tk.DISABLED)
+        r['font_btn'].config(state=tk.DISABLED)
+        r['color_btn'].config(state=tk.DISABLED)
+        r['fontsize_entry'].config(state=tk.DISABLED)
+        r['width_entry'].config(state=tk.DISABLED)
+        r['height_entry'].config(state=tk.DISABLED)
+    drag_locked = True
 
     # ── generation logic runs in background ────────────
     def run_generation():
         incomplete_log = []
-
+        
         for idx, row in enumerate(csv_rows, start=1):
             out_img = image_for_generating.copy()
             draw    = ImageDraw.Draw(out_img)
@@ -443,7 +488,7 @@ def generate():
             if row_incomplete:
                 incomplete_log.append(f"Row {idx}: missing data in some columns")
 
-            window.after(0, lambda i=idx: progress_var.set("Progress: " + f"{i} / {len(csv_rows)}"))
+            window.after(0, lambda i=idx: progress_var.set(f"{i} / {len(csv_rows)}"))
 
         # ── cleanup after loop finishes ────────────────
         if incomplete_log:
@@ -457,9 +502,33 @@ def generate():
             window.after(0, lambda: messagebox.showinfo("Done",
                 f"All {len(csv_rows)} images generated successfully!"))
 
-        window.after(0, lambda: status_var.set("Status: Idle"))
-        window.after(0, lambda: progress_var.set("Progress: " + f" 0 / {len(csv_rows)}"))
+        window.after(0, lambda: status_var.set("Idle"))
+        status_label.config(fg="red")
+        window.after(0, lambda: progress_var.set(f" {len(csv_rows)} / {len(csv_rows)}"))
+        progress_label.config(fg="red")
         window.after(0, lambda: generatebutton.config(state=tk.NORMAL))
+        window.after(0, lambda: score_chkbutton.config(state=tk.NORMAL))
+        window.after(0, lambda: gender_chkbutton.config(state=tk.NORMAL))
+        window.after(0, lambda: createbutton.config(state=tk.NORMAL))
+        window.after(0, lambda: removebutton.config(state=tk.NORMAL))
+        window.after(0, lambda: previewbutton.config(state=tk.NORMAL))
+        window.after(0, lambda: gender_col_menu.config(state=tk.NORMAL))
+        window.after(0, lambda: male_entry.config(state=tk.NORMAL))
+        window.after(0, lambda: female_entry.config(state=tk.NORMAL))
+        window.after(0, lambda: score_col_menu.config(state=tk.NORMAL))
+        window.after(0, lambda: filename_entry.config(state=tk.NORMAL))
+        window.after(0, lambda: format_menu.config(state=tk.NORMAL))
+        window.after(0, lambda: selectimg_button.config(state=tk.NORMAL))
+        window.after(0, lambda: selectcsv_button.config(state=tk.NORMAL))
+        for r in rectangles:
+            window.after(0, lambda r=r: r['col_menu'].config(state=tk.NORMAL))
+            window.after(0, lambda r=r: r['font_btn'].config(state=tk.NORMAL))
+            window.after(0, lambda r=r: r['color_btn'].config(state=tk.NORMAL))
+            window.after(0, lambda r=r: r['fontsize_entry'].config(state=tk.NORMAL))
+            window.after(0, lambda r=r: r['width_entry'].config(state=tk.NORMAL))
+            window.after(0, lambda r=r: r['height_entry'].config(state=tk.NORMAL))
+        window.after(0, lambda: set_drag_locked(False))
+        
 
     thread = threading.Thread(target=run_generation, daemon=True)
     thread.start()
@@ -477,11 +546,13 @@ window.resizable(True, True)
 top_bar = tk.Frame(window)
 top_bar.pack(fill=tk.X, padx=6, pady=4)
 
-tk.Button(top_bar, text="1 · Select CSV",   command=csv_file_selection).pack(side=tk.LEFT, padx=2)
+selectcsv_button = tk.Button(top_bar, text="1 · Select CSV",   command=csv_file_selection)
+selectcsv_button.pack(side=tk.LEFT, padx=2)
 csv_label = tk.Label(top_bar, text="No CSV loaded", anchor="w")
 csv_label.pack(side=tk.LEFT, padx=4)
 
-tk.Button(top_bar, text="2 · Select Image", command=image_file_selection).pack(side=tk.LEFT, padx=2)
+selectimg_button = tk.Button(top_bar, text="2 · Select Image", command=image_file_selection)
+selectimg_button.pack(side=tk.LEFT, padx=2)
 img_label = tk.Label(top_bar, text="No image loaded", anchor="w")
 img_label.pack(side=tk.LEFT, padx=4)
 
@@ -504,9 +575,11 @@ features_bar.pack(fill=tk.X, padx=6, pady=4)
 
 # gender feature
 gender_toggle_var = tk.BooleanVar(value=False)
-tk.Checkbutton(features_bar, text="Split output by gender",
+gender_chkbutton = tk.Checkbutton(features_bar, text="Split output",
                variable=gender_toggle_var,
-               command=toggle_gender_settings).pack(side=tk.LEFT, padx=4, pady=4)
+               state=tk.DISABLED,
+               command=toggle_gender_settings)
+gender_chkbutton.pack(side=tk.LEFT, padx=4, pady=4)
 
 gender_settings_frame = tk.Frame(features_bar)
 # packed/unpacked by toggle_gender_settings()
@@ -519,20 +592,21 @@ gender_col_menu.pack(side=tk.LEFT, padx=2)
 
 male_val_var = tk.StringVar(value="رجال")
 tk.Label(gender_settings_frame, text="Male value:").pack(side=tk.LEFT, padx=(8, 0))
-tk.Entry(gender_settings_frame, textvariable=male_val_var, width=8).pack(side=tk.LEFT, padx=2)
+male_entry = tk.Entry(gender_settings_frame, textvariable=male_val_var, width=8)
+male_entry.pack(side=tk.LEFT, padx=2)
 
 female_val_var = tk.StringVar(value="نساء")
 tk.Label(gender_settings_frame, text="Female value:").pack(side=tk.LEFT, padx=(8, 0))
-tk.Entry(gender_settings_frame, textvariable=female_val_var, width=8).pack(side=tk.LEFT, padx=2)
-
-# separator
-tk.Label(features_bar, text="│").pack(side=tk.LEFT, padx=8)
+female_entry = tk.Entry(gender_settings_frame, textvariable=female_val_var, width=8)
+female_entry.pack(side=tk.LEFT, padx=2)
 
 # score feature
 score_toggle_var = tk.BooleanVar(value=False)
-tk.Checkbutton(features_bar, text="Convert score → grade label",
+score_chkbutton = tk.Checkbutton(features_bar, text="Convert score",
                variable=score_toggle_var,
-               command=toggle_score_settings).pack(side=tk.LEFT, padx=4, pady=4)
+               state=tk.DISABLED,
+               command=toggle_score_settings)
+score_chkbutton.pack(side=tk.LEFT, padx=4, pady=4)
 
 score_settings_frame = tk.Frame(features_bar)
 # packed/unpacked by toggle_score_settings()
@@ -557,20 +631,28 @@ bottom_bar.pack(fill=tk.X, padx=6, pady=6, side=tk.BOTTOM)
 generatebutton = tk.Button(bottom_bar, text="⚡  Generate All Images",
           command=generate, bg="#4a90d9", fg="white")
 generatebutton.pack(side=tk.RIGHT, padx=4)
+tk.Label(bottom_bar).pack(side=tk.RIGHT, padx=6)
 
-progress_var = tk.StringVar(value="Progress: " + "0/0 (Select A CSV File!)")
-tk.Label(bottom_bar, textvariable=progress_var, fg="black", bg="#0af04f").pack(side=tk.RIGHT, padx=12)
+progress_var = tk.StringVar(value="Select A CSV File First!")
+progress_label = tk.Label(bottom_bar, textvariable=progress_var, fg="red")
+progress_label.pack(side=tk.RIGHT)
+tk.Label(bottom_bar, text="Progress:", bg="silver").pack(side=tk.RIGHT)
+tk.Label(bottom_bar).pack(side=tk.RIGHT, padx=6)
 
-status_var = tk.StringVar(value="Status: Idle")
-tk.Label(bottom_bar, textvariable=status_var, fg="black", bg="#08fc14").pack(side=tk.RIGHT, padx=12)
+status_var = tk.StringVar(value="Idle")
+status_label = tk.Label(bottom_bar, textvariable=status_var, fg="red")
+status_label.pack(side=tk.RIGHT)
+tk.Label(bottom_bar, text="Status:", bg="silver").pack(side=tk.RIGHT)
 
 tk.Label(bottom_bar, text="Filename prefix:").pack(side=tk.LEFT)
 prefix_var = tk.StringVar(value="")
-tk.Entry(bottom_bar, textvariable=prefix_var, width=12).pack(side=tk.LEFT, padx=2)
+filename_entry = tk.Entry(bottom_bar, textvariable=prefix_var, width=12)
+filename_entry.pack(side=tk.LEFT, padx=2)
 
 tk.Label(bottom_bar, text="  Format:").pack(side=tk.LEFT)
 format_var = tk.StringVar(value="PNG")
-tk.OptionMenu(bottom_bar, format_var, "PNG", "WEBP").pack(side=tk.LEFT, padx=2)
+format_menu = tk.OptionMenu(bottom_bar, format_var, "PNG", "WEBP")
+format_menu.pack(side=tk.LEFT, padx=2)
 # ── main area ─────────────────────────────────────────────────────────────────
 main_area = tk.Frame(window)
 main_area.pack(fill=tk.BOTH, expand=True, padx=6, pady=4)

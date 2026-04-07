@@ -468,6 +468,8 @@ def generate():
                     max_font = int(r['maxfont_var'].get())
                 except ValueError:
                     max_font = 36
+
+                max_font = int(max_font / scale)  # scale font up to match original image size
                 disp_text, font = prepare_text(raw_text, r['font_var'].get(), max_w, max_font)
                 draw.text(((x1+x2)/2, (y1+y2)/2), disp_text,
                           font=font, fill=r['color_var'].get(), anchor="mm")

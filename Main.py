@@ -125,6 +125,9 @@ def csv_file_selection():
     gender_chkbutton.config(state=tk.NORMAL)
     if image_for_generating:
         createbutton.config(state=tk.NORMAL)
+        generatebutton.config(state=tk.NORMAL)
+        filename_entry.config(state=tk.NORMAL)
+        format_menu.config(state=tk.NORMAL)
 
     # refresh rectangle column dropdowns
     if rectangles:
@@ -191,6 +194,9 @@ def image_file_selection():
     img_label.config(text=f"Image: {Path(path).name}  ({orig.width}×{orig.height})")
     if csv_headers:
         createbutton.config(state=tk.NORMAL)
+        generatebutton.config(state=tk.NORMAL)
+        filename_entry.config(state=tk.NORMAL)
+        format_menu.config(state=tk.NORMAL)
 
 # ── Rectangle management ───────────────────────────────────────────────────────
 RECT_W, RECT_H = 200, 50
@@ -204,8 +210,8 @@ def create_rectangle():
     rx1, ry1    = 80, 80
     rx2, ry2    = rx1 + RECT_W, ry1 + RECT_H
 
-    rect_id = canvas.create_rectangle(rx1, ry1, rx2, ry2, outline="blue", fill="", width=6)
-    text_id = canvas.create_text((rx1+rx2)//2, (ry1+ry2)//2, text=default_col, fill="blue")
+    rect_id = canvas.create_rectangle(rx1, ry1, rx2, ry2, outline="cyan", fill="", width=12)
+    text_id = canvas.create_text((rx1+rx2)//2, (ry1+ry2)//2, text=default_col, fill="cyan", font=("TkDefaultFont", 18))
 
     idx   = len(rectangles)
     outer = tk.LabelFrame(settings_inner, text=f"Rect {idx+1}", padx=4, pady=4)
@@ -546,12 +552,12 @@ window.resizable(True, True)
 top_bar = tk.Frame(window)
 top_bar.pack(fill=tk.X, padx=6, pady=4)
 
-selectcsv_button = tk.Button(top_bar, text="1 · Select CSV",   command=csv_file_selection)
+selectcsv_button = tk.Button(top_bar, text="1·  Select CSV",   command=csv_file_selection)
 selectcsv_button.pack(side=tk.LEFT, padx=2)
 csv_label = tk.Label(top_bar, text="No CSV loaded", anchor="w")
 csv_label.pack(side=tk.LEFT, padx=4)
 
-selectimg_button = tk.Button(top_bar, text="2 · Select Image", command=image_file_selection)
+selectimg_button = tk.Button(top_bar, text="2·  Select Image", command=image_file_selection)
 selectimg_button.pack(side=tk.LEFT, padx=2)
 img_label = tk.Label(top_bar, text="No image loaded", anchor="w")
 img_label.pack(side=tk.LEFT, padx=4)
@@ -560,11 +566,11 @@ img_label.pack(side=tk.LEFT, padx=4)
 rect_bar = tk.Frame(window)
 rect_bar.pack(fill=tk.X, padx=6, pady=2)
 
-createbutton  = tk.Button(rect_bar, text="+ Add Rectangle",    command=create_rectangle, state=tk.DISABLED)
+createbutton  = tk.Button(rect_bar, text="3·  + Add Rectangle",    command=create_rectangle, state=tk.DISABLED)
 createbutton.pack(side=tk.LEFT, padx=2)
-removebutton  = tk.Button(rect_bar, text="− Remove Last",       command=remove_rectangle, state=tk.DISABLED)
+removebutton  = tk.Button(rect_bar, text="3·  − Remove Last",       command=remove_rectangle, state=tk.DISABLED)
 removebutton.pack(side=tk.LEFT, padx=2)
-previewbutton = tk.Button(rect_bar, text="👁 Preview (row 1)", command=preview,           state=tk.DISABLED)
+previewbutton = tk.Button(rect_bar, text="3·  👁 Preview (row 1)", command=preview,           state=tk.DISABLED)
 previewbutton.pack(side=tk.LEFT, padx=2)
 preview_label = tk.Label(rect_bar, text="")
 preview_label.pack(side=tk.LEFT, padx=8)
@@ -572,47 +578,50 @@ preview_label.pack(side=tk.LEFT, padx=8)
 # ── special features bar ───────────────────────────────────────────────────────
 features_bar = tk.Frame(window, relief=tk.GROOVE, bd=1)
 features_bar.pack(fill=tk.X, padx=6, pady=4)
+features_bar.configure(bg="#e2e1e1")
 
 # gender feature
 gender_toggle_var = tk.BooleanVar(value=False)
-gender_chkbutton = tk.Checkbutton(features_bar, text="Split output",
+gender_chkbutton = tk.Checkbutton(features_bar, text="Split output  |", bg="#e2e1e1",
                variable=gender_toggle_var,
                state=tk.DISABLED,
                command=toggle_gender_settings)
 gender_chkbutton.pack(side=tk.LEFT, padx=4, pady=4)
 
 gender_settings_frame = tk.Frame(features_bar)
+gender_settings_frame.configure(bg="#e2e1e1")
 # packed/unpacked by toggle_gender_settings()
 
 gender_col_var = tk.StringVar(value="")
-tk.Label(gender_settings_frame, text="Gender column:").pack(side=tk.LEFT)
+tk.Label(gender_settings_frame, text="||  Gender column:", bg="#e2e1e1").pack(side=tk.LEFT)
 gender_col_menu = tk.OptionMenu(gender_settings_frame, gender_col_var, "")
 gender_col_menu.config(width=10)
 gender_col_menu.pack(side=tk.LEFT, padx=2)
 
 male_val_var = tk.StringVar(value="رجال")
-tk.Label(gender_settings_frame, text="Male value:").pack(side=tk.LEFT, padx=(8, 0))
+tk.Label(gender_settings_frame, text="Male value:", bg="#e2e1e1").pack(side=tk.LEFT, padx=(8, 0))
 male_entry = tk.Entry(gender_settings_frame, textvariable=male_val_var, width=8)
 male_entry.pack(side=tk.LEFT, padx=2)
 
 female_val_var = tk.StringVar(value="نساء")
-tk.Label(gender_settings_frame, text="Female value:").pack(side=tk.LEFT, padx=(8, 0))
+tk.Label(gender_settings_frame, text="Female value:", bg="#e2e1e1").pack(side=tk.LEFT, padx=(8, 0))
 female_entry = tk.Entry(gender_settings_frame, textvariable=female_val_var, width=8)
 female_entry.pack(side=tk.LEFT, padx=2)
 
 # score feature
 score_toggle_var = tk.BooleanVar(value=False)
-score_chkbutton = tk.Checkbutton(features_bar, text="Convert score",
+score_chkbutton = tk.Checkbutton(features_bar, text="Convert score  |", bg="#e2e1e1",
                variable=score_toggle_var,
                state=tk.DISABLED,
                command=toggle_score_settings)
 score_chkbutton.pack(side=tk.LEFT, padx=4, pady=4)
 
 score_settings_frame = tk.Frame(features_bar)
+score_settings_frame.configure(bg="#e2e1e1")
 # packed/unpacked by toggle_score_settings()
 
 score_col_var = tk.StringVar(value="")
-tk.Label(score_settings_frame, text="Score column:").pack(side=tk.LEFT)
+tk.Label(score_settings_frame, text="||  Score column:", bg="#e2e1e1").pack(side=tk.LEFT)
 score_col_menu = tk.OptionMenu(score_settings_frame, score_col_var, "")
 score_col_menu.config(width=10)
 score_col_menu.pack(side=tk.LEFT, padx=2)
@@ -621,43 +630,44 @@ tk.Label(score_settings_frame,
          text=" أكثر من 80% = ممتاز"
          " | أكثر من 60% = جيد جداً"
          " | أكثر من 40% = جيد"
-         " | أقل من 40% = مقبول",
-         fg="gray").pack(side=tk.LEFT, padx=6)
+         " | أقل من 40% = مقبول" + "  ||",
+         bg="#e2e1e1").pack(side=tk.LEFT, padx=6)
 
 # ── bottom bar ─────────────────────────────────────────────────────────────────
 bottom_bar = tk.Frame(window)
 bottom_bar.pack(fill=tk.X, padx=6, pady=6, side=tk.BOTTOM)
 
-generatebutton = tk.Button(bottom_bar, text="⚡  Generate All Images",
-          command=generate, bg="#4a90d9", fg="white")
+generatebutton = tk.Button(bottom_bar, text="4·  ⚡  Generate All Images",
+          command=generate, state=tk.DISABLED, bg="#4a90d9", fg="white")
 generatebutton.pack(side=tk.RIGHT, padx=4)
 tk.Label(bottom_bar).pack(side=tk.RIGHT, padx=6)
 
 progress_var = tk.StringVar(value="Select A CSV File First!")
-progress_label = tk.Label(bottom_bar, textvariable=progress_var, fg="red")
+progress_label = tk.Label(bottom_bar, textvariable=progress_var, fg="red", bg="#e2e1e1")
 progress_label.pack(side=tk.RIGHT)
-tk.Label(bottom_bar, text="Progress:", bg="silver").pack(side=tk.RIGHT)
+tk.Label(bottom_bar, text="Progress:", bg="#e2e1e1").pack(side=tk.RIGHT)
 tk.Label(bottom_bar).pack(side=tk.RIGHT, padx=6)
 
 status_var = tk.StringVar(value="Idle")
-status_label = tk.Label(bottom_bar, textvariable=status_var, fg="red")
+status_label = tk.Label(bottom_bar, textvariable=status_var, fg="red", bg="#e2e1e1")
 status_label.pack(side=tk.RIGHT)
-tk.Label(bottom_bar, text="Status:", bg="silver").pack(side=tk.RIGHT)
+tk.Label(bottom_bar, text="Status:", bg="#e2e1e1").pack(side=tk.RIGHT)
 
-tk.Label(bottom_bar, text="Filename prefix:").pack(side=tk.LEFT)
+tk.Label(bottom_bar, text="Filename prefix (OPTIONAL):").pack(side=tk.LEFT)
 prefix_var = tk.StringVar(value="")
-filename_entry = tk.Entry(bottom_bar, textvariable=prefix_var, width=12)
+filename_entry = tk.Entry(bottom_bar, textvariable=prefix_var, width=12, state=tk.DISABLED)
 filename_entry.pack(side=tk.LEFT, padx=2)
 
 tk.Label(bottom_bar, text="  Format:").pack(side=tk.LEFT)
 format_var = tk.StringVar(value="PNG")
 format_menu = tk.OptionMenu(bottom_bar, format_var, "PNG", "WEBP")
 format_menu.pack(side=tk.LEFT, padx=2)
+format_menu.config(state=tk.DISABLED)
 # ── main area ─────────────────────────────────────────────────────────────────
 main_area = tk.Frame(window)
 main_area.pack(fill=tk.BOTH, expand=True, padx=6, pady=4)
 
-canvas = tk.Canvas(main_area, bg="#aaaaaa", width=700, height=450)
+canvas = tk.Canvas(main_area, bg="#e2e1e1", width=700, height=450)
 canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 settings_frame = tk.Frame(main_area, width=230, relief=tk.SUNKEN, bd=1)

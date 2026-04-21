@@ -12,7 +12,7 @@ Arabic showcase: https://www.youtube.com/watch?v=OPjtep0hWbg
 \
 3- Spawn/remove rectangles, assign a header to each rectangle, move them to change where to print header data.
 \
-4- Press the generate button and select where you want the final output to generate one image per row detected using CSV data.
+4- Press the generate button and select the final output location to generate one image per CSV row.
 
 ----------------------------------------------------
 --------------- Functions Of The Tool: ---------------
@@ -22,8 +22,8 @@ Arabic showcase: https://www.youtube.com/watch?v=OPjtep0hWbg
 - Insert font file button. - Gives control of font color and size.
 - Shrinks font size automatically to prevent leaking outside the rectangle borders.
 - Gives control of rectangle borders size.
-- Can spawn rectangles up to amount of headers detected.
-- Output files naming starts with 1 and ascends. - Allows adding a prefix too.
+- Can spawn rectangles up to total amount of headers detected.
+- Output files naming starts with 1 and upwards. - Allows adding a prefix too.
 - Automatically adds x to image filename if missing data.
 - Has 2 more features that are intended to work in Arabic. (split output, convert score)
 

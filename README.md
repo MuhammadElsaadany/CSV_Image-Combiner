@@ -1,5 +1,5 @@
 # CSV_Image-Combiner
-A tool to generate copies of an image using rows data from a CSV file. (Supports Arabic)
+A tool to generate copies of an image using rows data from a CSV file. (Like a certificate generator - supports Arabic)
 
 Arabic showcase: https://www.youtube.com/watch?v=OPjtep0hWbg
 

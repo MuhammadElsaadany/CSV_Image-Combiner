@@ -25,7 +25,7 @@ Arabic showcase: https://www.youtube.com/watch?v=OPjtep0hWbg
 - Can spawn rectangles up to total amount of headers detected.
 - Output files naming starts with 1 and upwards. - Allows adding a prefix too.
 - Automatically adds x to image filename if missing data.
-- Has 2 more features that are intended to work only in Arabic. (split output, convert score)
+- Has 2 more features that are intended to work only in Arabic. (split output, convert score, person name output..)
 
 ----------------------------------------------------
 --------------- Note: ---------------

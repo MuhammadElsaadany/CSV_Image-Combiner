@@ -128,6 +128,7 @@ def csv_file_selection():
         generatebutton.config(state=tk.NORMAL)
         filename_entry.config(state=tk.NORMAL)
         format_menu.config(state=tk.NORMAL)
+        person_filename_toggle.config(state=tk.NORMAL)
 
     # refresh rectangle column dropdowns
     if rectangles:
@@ -197,6 +198,7 @@ def image_file_selection():
         generatebutton.config(state=tk.NORMAL)
         filename_entry.config(state=tk.NORMAL)
         format_menu.config(state=tk.NORMAL)
+        person_filename_toggle.config(state=tk.NORMAL)
 
 # ── Rectangle management ───────────────────────────────────────────────────────
 RECT_W, RECT_H = 200, 50
@@ -434,6 +436,7 @@ def generate():
     format_menu.config(state=tk.DISABLED)
     selectimg_button.config(state=tk.DISABLED)
     selectcsv_button.config(state=tk.DISABLED)
+    person_filename_toggle.config(state=tk.DISABLED)
     for r in rectangles:
         r['col_menu'].config(state=tk.DISABLED)
         r['font_btn'].config(state=tk.DISABLED)
@@ -475,7 +478,14 @@ def generate():
                           font=font, fill=r['color_var'].get(), anchor="mm")
 
             marker   = "x" if row_incomplete else ""
-            filename = f"{prefix}{marker}{idx}.{ext}"
+
+            if prefix in csv_headers and person_filename_toggle_var.get():
+                person_name = row.get(prefix, "")
+                filename = f"{marker}{person_name}{idx}.{ext}"
+            else:
+                filename = f"{prefix}{marker}{idx}.{ext}"
+
+
             save_kwargs = {'quality': 95} if fmt == "JPG" else {}
 
             if gender_toggle_var.get():
@@ -528,6 +538,7 @@ def generate():
         window.after(0, lambda: format_menu.config(state=tk.NORMAL))
         window.after(0, lambda: selectimg_button.config(state=tk.NORMAL))
         window.after(0, lambda: selectcsv_button.config(state=tk.NORMAL))
+        window.after(0, lambda: person_filename_toggle.config(state=tk.NORMAL))
         for r in rectangles:
             window.after(0, lambda r=r: r['col_menu'].config(state=tk.NORMAL))
             window.after(0, lambda r=r: r['font_btn'].config(state=tk.NORMAL))
@@ -659,6 +670,12 @@ tk.Label(bottom_bar, text="Filename prefix (OPTIONAL):").pack(side=tk.LEFT)
 prefix_var = tk.StringVar(value="")
 filename_entry = tk.Entry(bottom_bar, textvariable=prefix_var, width=12, state=tk.DISABLED)
 filename_entry.pack(side=tk.LEFT, padx=2)
+
+person_filename_toggle_var = tk.BooleanVar(value=False)
+person_filename_toggle = tk.Checkbutton(bottom_bar, text="Person as filename?", bg="#e2e1e1",
+               variable=person_filename_toggle_var,
+               state=tk.DISABLED)
+person_filename_toggle.pack(side=tk.LEFT, padx=2, pady=2)
 
 tk.Label(bottom_bar, text="  Format:").pack(side=tk.LEFT)
 format_var = tk.StringVar(value="PNG")

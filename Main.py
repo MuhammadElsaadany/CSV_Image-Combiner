@@ -460,6 +460,7 @@ def generate():
                 raw_text = row.get(col, "")
                 if not raw_text.strip():
                     row_incomplete = True
+                    incomplete_log.append(f"Row: {idx} is missing data in some columns.")
 
                 if score_toggle_var.get() and col == score_col_var.get():
                     raw_text = get_grade_label(raw_text)
@@ -477,45 +478,93 @@ def generate():
                 draw.text(((x1+x2)/2, (y1+y2)/2), disp_text,
                           font=font, fill=r['color_var'].get(), anchor="mm")
 
-            marker   = "x" if row_incomplete else ""
+
+            marker   = "missing data" if row_incomplete else ""
+
 
             if prefix in csv_headers and person_filename_toggle_var.get():
-                person_name = row.get(prefix, "")
-                filename = f"{marker}{person_name}{idx}.{ext}"
+                try:
+                    person_name = row.get(prefix, "")
+                    filename = f"{marker} {person_name} {idx}.{ext}"
+
+                    save_kwargs = {'quality': 95} if fmt == "JPG" else {}
+
+                    if gender_toggle_var.get():
+                        gender_val = row.get(gender_col_var.get(), "").strip()
+                        if gender_val == male_val_var.get().strip():
+                            subfolder = Path(out_dir) / "رجال"
+                        elif gender_val == female_val_var.get().strip():
+                            subfolder = Path(out_dir) / "نساء"
+                        else:
+                            subfolder = Path(out_dir) / "لم يتم التحديد"
+                        subfolder.mkdir(exist_ok=True)
+                        save_path = subfolder / filename
+                    else:
+                        save_path = Path(out_dir) / filename
+
+                    out_img.save(str(save_path), **save_kwargs)
+
+                    window.after(0, lambda i=idx: progress_var.set(f"{i} / {len(csv_rows)}"))
+
+
+
+                except:
+                    person_name = row.get(prefix, "")
+                    filename = f"{marker} invalid prefix {idx}.{ext}"
+                    incomplete_log.append(f"Row: {idx} | Couldn't process invalid name: {person_name}")
+                    row_incomplete = True
+
+                    save_kwargs = {'quality': 95} if fmt == "JPG" else {}
+
+                    if gender_toggle_var.get():
+                        gender_val = row.get(gender_col_var.get(), "").strip()
+                        if gender_val == male_val_var.get().strip():
+                            subfolder = Path(out_dir) / "رجال"
+                        elif gender_val == female_val_var.get().strip():
+                            subfolder = Path(out_dir) / "نساء"
+                        else:
+                            subfolder = Path(out_dir) / "لم يتم التحديد"
+                        subfolder.mkdir(exist_ok=True)
+                        save_path = subfolder / filename
+                    else:
+                        save_path = Path(out_dir) / filename
+
+                    out_img.save(str(save_path), **save_kwargs)
+
+                    window.after(0, lambda i=idx: progress_var.set(f"{i} / {len(csv_rows)}"))
+
+
+
             else:
-                filename = f"{prefix}{marker}{idx}.{ext}"
+                filename = f"{prefix} {marker} {idx}.{ext}"
 
+                save_kwargs = {'quality': 95} if fmt == "JPG" else {}
 
-            save_kwargs = {'quality': 95} if fmt == "JPG" else {}
-
-            if gender_toggle_var.get():
-                gender_val = row.get(gender_col_var.get(), "").strip()
-                if gender_val == male_val_var.get().strip():
-                    subfolder = Path(out_dir) / "رجال"
-                elif gender_val == female_val_var.get().strip():
-                    subfolder = Path(out_dir) / "نساء"
+                if gender_toggle_var.get():
+                    gender_val = row.get(gender_col_var.get(), "").strip()
+                    if gender_val == male_val_var.get().strip():
+                        subfolder = Path(out_dir) / "رجال"
+                    elif gender_val == female_val_var.get().strip():
+                        subfolder = Path(out_dir) / "نساء"
+                    else:
+                        subfolder = Path(out_dir) / "لم يتم التحديد"
+                    subfolder.mkdir(exist_ok=True)
+                    save_path = subfolder / filename
                 else:
-                    subfolder = Path(out_dir) / "لم يتم التحديد"
-                subfolder.mkdir(exist_ok=True)
-                save_path = subfolder / filename
-            else:
-                save_path = Path(out_dir) / filename
+                    save_path = Path(out_dir) / filename
 
-            out_img.save(str(save_path), **save_kwargs)
+                out_img.save(str(save_path), **save_kwargs)
 
-            if row_incomplete:
-                incomplete_log.append(f"Row {idx}: missing data in some columns")
-
-            window.after(0, lambda i=idx: progress_var.set(f"{i} / {len(csv_rows)}"))
+                window.after(0, lambda i=idx: progress_var.set(f"{i} / {len(csv_rows)}"))
 
         # ── cleanup after loop finishes ────────────────
         if incomplete_log:
-            log_path = Path(out_dir) / f"{prefix}incomplete_rows.txt"
+            log_path = Path(out_dir) / f"incomplete_rows.txt"
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(incomplete_log))
             window.after(0, lambda: messagebox.showinfo("Done",
                 f"Generated {len(csv_rows)} images.\n"
-                f"{len(incomplete_log)} had missing data, see incomplete_rows.txt"))
+                f"{len(incomplete_log)} had missing/invalid data, check incomplete_rows.txt"))
         else:
             window.after(0, lambda: messagebox.showinfo("Done",
                 f"All {len(csv_rows)} images generated successfully!"))
@@ -672,7 +721,7 @@ filename_entry = tk.Entry(bottom_bar, textvariable=prefix_var, width=12, state=t
 filename_entry.pack(side=tk.LEFT, padx=2)
 
 person_filename_toggle_var = tk.BooleanVar(value=False)
-person_filename_toggle = tk.Checkbutton(bottom_bar, text="Person as filename?", bg="#e2e1e1",
+person_filename_toggle = tk.Checkbutton(bottom_bar, text="Person name as prefix?", bg="#e2e1e1",
                variable=person_filename_toggle_var,
                state=tk.DISABLED)
 person_filename_toggle.pack(side=tk.LEFT, padx=2, pady=2)
